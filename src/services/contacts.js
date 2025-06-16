@@ -1,8 +1,32 @@
 import { Contact } from '../db/models/contact.js';
+import { calculatePaginationData } from '../utils/pagination.js';
 
-export const getAllContacts = async () => {
-  const contacts = await Contact.find();
-  return contacts;
+export const getAllContacts = async ({
+  page = 1,
+  perPage = 10,
+  sortBy = 'name',
+  sortOrder = 'asc',
+  filter = {},
+} = {}) => {
+  const limit = perPage;
+  const skip = (page - 1) * perPage;
+
+  // Створюємо об'єкт сортування для MongoDB
+  const sortOptions = {};
+  sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+  const contactsQuery = Contact.find(filter);
+  const [contacts, totalCount] = await Promise.all([
+    contactsQuery.skip(skip).limit(limit).sort(sortOptions).exec(),
+    Contact.find(filter).countDocuments(),
+  ]);
+
+  const paginationData = calculatePaginationData(totalCount, page, perPage);
+
+  return {
+    data: contacts,
+    ...paginationData,
+  };
 };
 
 export const getContactsById = async (contactId) => {
