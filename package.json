@@ -21,17 +21,22 @@
   "description": "",
   "devDependencies": {
     "@eslint/js": "^9.28.0",
+    "@types/bcrypt": "^5.0.2",
     "eslint": "^9.28.0",
     "globals": "^16.2.0",
     "nodemon": "^3.1.10",
     "pino-pretty": "^13.0.0"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "crypto": "^1.0.1",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "http-errors": "^2.0.0",
     "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.15.1",
     "pino-http": "^10.4.0"
   }

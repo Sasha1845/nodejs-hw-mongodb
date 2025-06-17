@@ -7,6 +7,7 @@ export const getAllContacts = async ({
   sortBy = 'name',
   sortOrder = 'asc',
   filter = {},
+  userId,
 } = {}) => {
   const limit = perPage;
   const skip = (page - 1) * perPage;
@@ -15,10 +16,13 @@ export const getAllContacts = async ({
   const sortOptions = {};
   sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-  const contactsQuery = Contact.find(filter);
+  // Додаємо userId до фільтра
+  const searchFilter = { ...filter, userId };
+
+  const contactsQuery = Contact.find(searchFilter);
   const [contacts, totalCount] = await Promise.all([
     contactsQuery.skip(skip).limit(limit).sort(sortOptions).exec(),
-    Contact.find(filter).countDocuments(),
+    Contact.find(searchFilter).countDocuments(),
   ]);
 
   const paginationData = calculatePaginationData(totalCount, page, perPage);
@@ -29,19 +33,24 @@ export const getAllContacts = async ({
   };
 };
 
-export const getContactsById = async (contactId) => {
-  const contact = await Contact.findById(contactId);
+export const getContactsById = async (contactId, userId) => {
+  const contact = await Contact.findOne({ _id: contactId, userId });
   return contact;
 };
 
-export const createContact = async (payload) => {
-  const contact = await Contact.create(payload);
+export const createContact = async (payload, userId) => {
+  const contact = await Contact.create({ ...payload, userId });
   return contact;
 };
 
-export const updateContact = async (contactId, payload, options = {}) => {
+export const updateContact = async (
+  contactId,
+  payload,
+  userId,
+  options = {},
+) => {
   const rawResult = await Contact.findOneAndUpdate(
-    { _id: contactId },
+    { _id: contactId, userId },
     payload,
     {
       new: true,
@@ -55,9 +64,10 @@ export const updateContact = async (contactId, payload, options = {}) => {
   return rawResult.value;
 };
 
-export const deleteContact = async (contactId) => {
+export const deleteContact = async (contactId, userId) => {
   const contact = await Contact.findOneAndDelete({
     _id: contactId,
+    userId,
   });
 
   return contact;
