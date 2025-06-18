@@ -39,7 +39,6 @@ const contactSchema = new mongoose.Schema(
   },
 );
 
-// Індекс для швидкого пошуку контактів конкретного користувача
 contactSchema.index({ userId: 1 });
 
 export const Contact = mongoose.model('contacts', contactSchema);
