@@ -10,6 +10,7 @@ import { ctrlWrapper } from '../utils/ctrlWrapper.js';
 import { validateBody } from '../middlewares/validateBody.js';
 import { isValidId } from '../middlewares/isValidId.js';
 import { authenticate } from '../middlewares/authenticate.js';
+import { uploadToCloudinary } from '../middlewares/upload.js';
 import {
   createContactSchema,
   updateContactSchema,
@@ -26,6 +27,7 @@ router.get('/:contactId', isValidId, ctrlWrapper(getContactByIdController));
 
 router.post(
   '/',
+  uploadToCloudinary,
   validateBody(createContactSchema),
   ctrlWrapper(createContactController),
 );
@@ -33,6 +35,7 @@ router.post(
 router.patch(
   '/:contactId',
   isValidId,
+  uploadToCloudinary,
   validateBody(updateContactSchema),
   ctrlWrapper(patchContactController),
 );

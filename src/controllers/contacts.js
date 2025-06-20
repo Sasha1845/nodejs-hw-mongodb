@@ -11,6 +11,7 @@ import {
   parseSortParams,
   parseFilterParams,
 } from '../utils/pagination.js';
+import { savePhotoToCloudinary } from '../middlewares/upload.js';
 
 export const getAllContactsController = async (req, res) => {
   const { page, perPage } = parsePaginationParams(req.query);
@@ -52,7 +53,26 @@ export const getContactByIdController = async (req, res) => {
 
 export const createContactController = async (req, res) => {
   const userId = req.user._id;
-  const contact = await createContact(req.body, userId);
+  let photoUrl = null;
+
+  // Якщо є завантажений файл, зберігаємо його на Cloudinary
+  if (req.file) {
+    try {
+      photoUrl = await savePhotoToCloudinary(
+        req.file.buffer,
+        req.file.originalname,
+      );
+    } catch {
+      throw createHttpError(500, 'Failed to upload photo');
+    }
+  }
+
+  const contactData = {
+    ...req.body,
+    photo: photoUrl,
+  };
+
+  const contact = await createContact(contactData, userId);
 
   res.status(201).json({
     status: 201,
@@ -64,7 +84,30 @@ export const createContactController = async (req, res) => {
 export const patchContactController = async (req, res) => {
   const { contactId } = req.params;
   const userId = req.user._id;
-  const result = await updateContact(contactId, req.body, userId);
+  let photoUrl = req.body.photo; // Зберігаємо існуюче фото якщо нове не завантажується
+
+  // Якщо є новий завантажений файл, зберігаємо його на Cloudinary
+  if (req.file) {
+    try {
+      photoUrl = await savePhotoToCloudinary(
+        req.file.buffer,
+        req.file.originalname,
+      );
+    } catch {
+      throw createHttpError(500, 'Failed to upload photo');
+    }
+  }
+
+  const updateData = {
+    ...req.body,
+  };
+
+  // Додаємо URL фото тільки якщо воно є
+  if (photoUrl) {
+    updateData.photo = photoUrl;
+  }
+
+  const result = await updateContact(contactId, updateData, userId);
 
   if (!result) {
     throw createHttpError(404, 'Contact not found');

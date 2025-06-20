@@ -33,6 +33,10 @@ export const createContactSchema = Joi.object({
     .messages({
       'any.only': 'Contact type must be one of: work, home, personal',
     }),
+
+  photo: Joi.string().optional().messages({
+    'string.base': 'Photo must be a string',
+  }),
 });
 
 export const updateContactSchema = Joi.object({
@@ -60,6 +64,10 @@ export const updateContactSchema = Joi.object({
     .messages({
       'any.only': 'Contact type must be one of: work, home, personal',
     }),
+
+  photo: Joi.string().optional().messages({
+    'string.base': 'Photo must be a string',
+  }),
 })
   .min(1)
   .messages({
