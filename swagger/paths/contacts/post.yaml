@@ -1,0 +1,93 @@
+tags:
+  - Contacts
+summary: Create new contact
+operationId: createContact
+description: Create a new contact for the authenticated user. Supports photo upload to Cloudinary.
+security:
+  - bearerAuth: []
+requestBody:
+  description: Contact data to create
+  required: true
+  content:
+    multipart/form-data:
+      schema:
+        type: object
+        required:
+          - name
+          - phoneNumber
+          - contactType
+        properties:
+          name:
+            type: string
+            minLength: 3
+            maxLength: 20
+            example: 'John Doe'
+            description: Contact's full name
+          phoneNumber:
+            type: string
+            minLength: 3
+            maxLength: 20
+            example: '+1234567890'
+            description: Contact's phone number
+          email:
+            type: string
+            format: email
+            minLength: 3
+            maxLength: 254
+            example: 'john.doe@example.com'
+            description: Contact's email address (optional)
+          isFavourite:
+            type: boolean
+            default: false
+            example: false
+            description: Whether the contact is marked as favourite
+          contactType:
+            type: string
+            enum: [work, home, personal]
+            default: personal
+            example: 'personal'
+            description: Type of contact
+          photo:
+            type: string
+            format: binary
+            description: Contact's photo (image file, max 5MB)
+responses:
+  '201':
+    description: Contact successfully created
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - status
+            - message
+            - data
+          properties:
+            status:
+              type: integer
+              example: 201
+            message:
+              type: string
+              example: 'Successfully created a contact!'
+            data:
+              $ref: '../../components/schemas/contact.yaml'
+  '400':
+    $ref: '../../components/responses/400.yaml'
+  '401':
+    $ref: '../../components/responses/401.yaml'
+  '500':
+    description: Internal server error (e.g., photo upload failure)
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            status:
+              type: integer
+              example: 500
+            message:
+              type: string
+              example: 'Failed to upload photo'
+            data:
+              type: string
+              example: 'Failed to upload photo'
