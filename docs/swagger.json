@@ -1,0 +1,899 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "Contact Manager API",
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "description": "A RESTful API for managing user contacts with authentication, password reset functionality, and photo upload capabilities. Users can register, login, manage their contacts with CRUD operations, and upload contact photos to Cloudinary."
+  },
+  "servers": [
+    {
+      "url": "https://nodejs-hw-mongodb-ti7h.onrender.com"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Contacts",
+      "description": "Contact management endpoints for CRUD operations"
+    }
+  ],
+  "paths": {
+    "/contacts": {
+      "get": {
+        "tags": [
+          "Contacts"
+        ],
+        "summary": "Get all contacts",
+        "operationId": "getAllContacts",
+        "description": "Retrieve all contacts for the authenticated user with pagination, sorting, and filtering options.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "example": 1
+            },
+            "description": "Page number for pagination"
+          },
+          {
+            "in": "query",
+            "name": "perPage",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10,
+              "example": 10
+            },
+            "description": "Number of contacts per page"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "name",
+                "phoneNumber",
+                "email",
+                "isFavourite",
+                "contactType",
+                "createdAt",
+                "updatedAt"
+              ],
+              "default": "name",
+              "example": "name"
+            },
+            "description": "Field to sort by"
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "asc",
+              "example": "asc"
+            },
+            "description": "Sort order (ascending or descending)"
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "work",
+                "home",
+                "personal"
+              ],
+              "example": "personal"
+            },
+            "description": "Filter contacts by type"
+          },
+          {
+            "in": "query",
+            "name": "isFavourite",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "example": true
+            },
+            "description": "Filter contacts by favourite status"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contacts successfully retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully found contacts!"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/contact"
+                          }
+                        },
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "perPage": {
+                          "type": "integer",
+                          "example": 10
+                        },
+                        "totalItems": {
+                          "type": "integer",
+                          "example": 50
+                        },
+                        "totalPages": {
+                          "type": "integer",
+                          "example": 5
+                        },
+                        "hasPreviousPage": {
+                          "type": "boolean",
+                          "example": false
+                        },
+                        "hasNextPage": {
+                          "type": "boolean",
+                          "example": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Contacts"
+        ],
+        "summary": "Create new contact",
+        "operationId": "createContact",
+        "description": "Create a new contact for the authenticated user. Supports photo upload to Cloudinary.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "description": "Contact data to create",
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "phoneNumber",
+                  "contactType"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 20,
+                    "example": "John Doe",
+                    "description": "Contact's full name"
+                  },
+                  "phoneNumber": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 20,
+                    "example": "+1234567890",
+                    "description": "Contact's phone number"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "minLength": 3,
+                    "maxLength": 254,
+                    "example": "john.doe@example.com",
+                    "description": "Contact's email address (optional)"
+                  },
+                  "isFavourite": {
+                    "type": "boolean",
+                    "default": false,
+                    "example": false,
+                    "description": "Whether the contact is marked as favourite"
+                  },
+                  "contactType": {
+                    "type": "string",
+                    "enum": [
+                      "work",
+                      "home",
+                      "personal"
+                    ],
+                    "default": "personal",
+                    "example": "personal",
+                    "description": "Type of contact"
+                  },
+                  "photo": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Contact's photo (image file, max 5MB)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Contact successfully created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "integer",
+                      "example": 201
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully created a contact!"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/contact"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "500": {
+            "description": "Internal server error (e.g., photo upload failure)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "integer",
+                      "example": 500
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Failed to upload photo"
+                    },
+                    "data": {
+                      "type": "string",
+                      "example": "Failed to upload photo"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contacts/{contactId}": {
+      "get": {
+        "tags": [
+          "Contacts"
+        ],
+        "summary": "Get contact by ID",
+        "operationId": "getContactById",
+        "description": "Retrieve a specific contact by its unique identifier. The contact must belong to the authenticated user.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contactId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "ObjectId",
+              "example": "507f1f77bcf86cd799439011"
+            },
+            "description": "The unique identifier of the contact"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contact successfully retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully found contact with id 507f1f77bcf86cd799439011!"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/contact"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "404": {
+            "description": "Contact not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "integer",
+                      "example": 404
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Contact not found"
+                    },
+                    "data": {
+                      "type": "string",
+                      "example": "Contact not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Contacts"
+        ],
+        "summary": "Update contact",
+        "operationId": "updateContact",
+        "description": "Update an existing contact by its ID. At least one field must be provided. Supports photo upload to replace existing photo.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contactId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "ObjectId",
+              "example": "507f1f77bcf86cd799439011"
+            },
+            "description": "The unique identifier of the contact to update"
+          }
+        ],
+        "requestBody": {
+          "description": "Contact data to update (at least one field required)",
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "minProperties": 1,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 20,
+                    "example": "Jane Doe",
+                    "description": "Contact's full name"
+                  },
+                  "phoneNumber": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 20,
+                    "example": "+1987654321",
+                    "description": "Contact's phone number"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "minLength": 3,
+                    "maxLength": 254,
+                    "example": "jane.doe@example.com",
+                    "description": "Contact's email address"
+                  },
+                  "isFavourite": {
+                    "type": "boolean",
+                    "example": true,
+                    "description": "Whether the contact is marked as favourite"
+                  },
+                  "contactType": {
+                    "type": "string",
+                    "enum": [
+                      "work",
+                      "home",
+                      "personal"
+                    ],
+                    "example": "work",
+                    "description": "Type of contact"
+                  },
+                  "photo": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "New contact's photo (image file, max 5MB)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contact successfully updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully patched a contact!"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/contact"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "404": {
+            "description": "Contact not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "integer",
+                      "example": 404
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Contact not found"
+                    },
+                    "data": {
+                      "type": "string",
+                      "example": "Contact not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error (e.g., photo upload failure)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "integer",
+                      "example": 500
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Failed to upload photo"
+                    },
+                    "data": {
+                      "type": "string",
+                      "example": "Failed to upload photo"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Contacts"
+        ],
+        "summary": "Update contact",
+        "operationId": "updateContact",
+        "description": "Update an existing contact by its ID. At least one field must be provided. Supports photo upload to replace existing photo.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contactId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "ObjectId",
+              "example": "507f1f77bcf86cd799439011"
+            },
+            "description": "The unique identifier of the contact to update"
+          }
+        ],
+        "requestBody": {
+          "description": "Contact data to update (at least one field required)",
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "minProperties": 1,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 20,
+                    "example": "Jane Doe",
+                    "description": "Contact's full name"
+                  },
+                  "phoneNumber": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 20,
+                    "example": "+1987654321",
+                    "description": "Contact's phone number"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "minLength": 3,
+                    "maxLength": 254,
+                    "example": "jane.doe@example.com",
+                    "description": "Contact's email address"
+                  },
+                  "isFavourite": {
+                    "type": "boolean",
+                    "example": true,
+                    "description": "Whether the contact is marked as favourite"
+                  },
+                  "contactType": {
+                    "type": "string",
+                    "enum": [
+                      "work",
+                      "home",
+                      "personal"
+                    ],
+                    "example": "work",
+                    "description": "Type of contact"
+                  },
+                  "photo": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "New contact's photo (image file, max 5MB)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contact successfully updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully patched a contact!"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/contact"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "404": {
+            "description": "Contact not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "integer",
+                      "example": 404
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Contact not found"
+                    },
+                    "data": {
+                      "type": "string",
+                      "example": "Contact not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error (e.g., photo upload failure)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "integer",
+                      "example": 500
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Failed to upload photo"
+                    },
+                    "data": {
+                      "type": "string",
+                      "example": "Failed to upload photo"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "contact": {
+        "type": "object",
+        "required": [
+          "_id",
+          "name",
+          "phoneNumber",
+          "contactType",
+          "isFavourite",
+          "userId",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "_id": {
+            "type": "string",
+            "format": "ObjectId",
+            "example": "507f1f77bcf86cd799439011",
+            "description": "Unique identifier of the contact"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 20,
+            "example": "John Doe",
+            "description": "Contact's full name"
+          },
+          "phoneNumber": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 20,
+            "example": "+1234567890",
+            "description": "Contact's phone number"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "john.doe@example.com",
+            "description": "Contact's email address"
+          },
+          "isFavourite": {
+            "type": "boolean",
+            "default": false,
+            "example": false,
+            "description": "Whether the contact is marked as favourite"
+          },
+          "contactType": {
+            "type": "string",
+            "enum": [
+              "work",
+              "home",
+              "personal"
+            ],
+            "default": "personal",
+            "example": "personal",
+            "description": "Type of contact"
+          },
+          "photo": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://res.cloudinary.com/demo/image/upload/v1234567890/contacts/contact_1234567890.jpg",
+            "description": "URL of the contact's photo"
+          },
+          "userId": {
+            "type": "string",
+            "format": "ObjectId",
+            "example": "507f1f77bcf86cd799439012",
+            "description": "ID of the user who owns this contact"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2023-10-15T10:30:00.000Z",
+            "description": "Timestamp when the contact was created"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2023-10-15T10:30:00.000Z",
+            "description": "Timestamp when the contact was last updated"
+          }
+        }
+      }
+    },
+    "responses": {
+      "400": {
+        "description": "Bad Request - validation error or invalid data",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "status",
+                "message",
+                "data"
+              ],
+              "properties": {
+                "status": {
+                  "type": "integer",
+                  "example": 400
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Name must be at least 3 characters long"
+                },
+                "data": {
+                  "type": "string",
+                  "example": "Name must be at least 3 characters long"
+                }
+              }
+            }
+          }
+        }
+      },
+      "401": {
+        "description": "Unauthorized - invalid or missing authentication token",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "status",
+                "message",
+                "data"
+              ],
+              "properties": {
+                "status": {
+                  "type": "integer",
+                  "example": 401
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Unauthorized"
+                },
+                "data": {
+                  "type": "string",
+                  "example": "Unauthorized"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

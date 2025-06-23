@@ -1,0 +1,113 @@
+tags:
+  - Contacts
+summary: Update contact
+operationId: updateContact
+description: Update an existing contact by its ID. At least one field must be provided. Supports photo upload to replace existing photo.
+security:
+  - bearerAuth: []
+parameters:
+  - in: path
+    name: contactId
+    required: true
+    schema:
+      type: string
+      format: ObjectId
+      example: '507f1f77bcf86cd799439011'
+    description: The unique identifier of the contact to update
+requestBody:
+  description: Contact data to update (at least one field required)
+  required: true
+  content:
+    multipart/form-data:
+      schema:
+        type: object
+        minProperties: 1
+        properties:
+          name:
+            type: string
+            minLength: 3
+            maxLength: 20
+            example: 'Jane Doe'
+            description: Contact's full name
+          phoneNumber:
+            type: string
+            minLength: 3
+            maxLength: 20
+            example: '+1987654321'
+            description: Contact's phone number
+          email:
+            type: string
+            format: email
+            minLength: 3
+            maxLength: 254
+            example: 'jane.doe@example.com'
+            description: Contact's email address
+          isFavourite:
+            type: boolean
+            example: true
+            description: Whether the contact is marked as favourite
+          contactType:
+            type: string
+            enum: [work, home, personal]
+            example: 'work'
+            description: Type of contact
+          photo:
+            type: string
+            format: binary
+            description: New contact's photo (image file, max 5MB)
+responses:
+  '200':
+    description: Contact successfully updated
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - status
+            - message
+            - data
+          properties:
+            status:
+              type: integer
+              example: 200
+            message:
+              type: string
+              example: 'Successfully patched a contact!'
+            data:
+              $ref: '../../../components/schemas/contact.yaml'
+  '400':
+    $ref: '../../../components/responses/400.yaml'
+  '401':
+    $ref: '../../../components/responses/401.yaml'
+  '404':
+    description: Contact not found
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            status:
+              type: integer
+              example: 404
+            message:
+              type: string
+              example: 'Contact not found'
+            data:
+              type: string
+              example: 'Contact not found'
+  '500':
+    description: Internal server error (e.g., photo upload failure)
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            status:
+              type: integer
+              example: 500
+            message:
+              type: string
+              example: 'Failed to upload photo'
+            data:
+              type: string
+              example: 'Failed to upload photo'

@@ -4,9 +4,8 @@ import pino from 'pino-http';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import contactsRouter from './routers/contacts.js';
 import authRouter from './routers/auth.js';
 import { errorHandler } from './middlewares/errorHandler.js';
@@ -15,16 +14,20 @@ import { notFoundHandler } from './middlewares/notFoundHandler.js';
 dotenv.config();
 
 const PORT = Number(process.env.PORT);
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 export const setupServer = async () => {
   const app = express();
 
+  // Middleware для парсингу JSON
   app.use(express.json());
-  app.use(cors());
+
+  // Middleware для роботи з cookies
   app.use(cookieParser());
 
+  // Налаштування CORS
+  app.use(cors());
+
+  // Логування запитів
   app.use(
     pino({
       transport: {
@@ -33,96 +36,60 @@ export const setupServer = async () => {
     }),
   );
 
-  // Swagger documentation setup
-  const swaggerPath = path.join(__dirname, 'docs', 'swagger.json');
+  // Налаштування Swagger UI для документації API
+  try {
+    const swaggerDocument = JSON.parse(
+      readFileSync(resolve('docs', 'swagger.json'), 'utf8'),
+    );
 
-  if (fs.existsSync(swaggerPath)) {
-    try {
-      const swaggerDocument = JSON.parse(fs.readFileSync(swaggerPath, 'utf8'));
-
-      const swaggerOptions = {
-        customCss: `
-          .swagger-ui .topbar { display: none }
-          .swagger-ui .info { margin-bottom: 30px; }
-          .swagger-ui .scheme-container { background: #fafafa; padding: 15px; margin-bottom: 20px; }
-        `,
+    app.use(
+      '/api-docs',
+      swaggerUi.serve,
+      swaggerUi.setup(swaggerDocument, {
+        customCss: '.swagger-ui .topbar { display: none }',
         customSiteTitle: 'Contact Manager API Documentation',
         swaggerOptions: {
           persistAuthorization: true,
-          displayRequestDuration: true,
-          docExpansion: 'list',
-          filter: true,
-          showRequestHeaders: true,
-          tryItOutEnabled: true,
-          supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch'],
         },
-      };
+      }),
+    );
 
-      app.use(
-        '/api-docs',
-        swaggerUi.serve,
-        swaggerUi.setup(swaggerDocument, swaggerOptions),
-      );
-
-      // Додатковий роут для отримання raw JSON документації
-      app.get('/api-docs.json', (req, res) => {
-        res.setHeader('Content-Type', 'application/json');
-        res.send(swaggerDocument);
-      });
-
-      console.log('📚 Swagger documentation loaded successfully');
-    } catch (error) {
-      console.warn('⚠️  Could not parse swagger documentation:', error.message);
-      app.get('/api-docs', (req, res) => {
-        res.status(500).json({
-          error: 'Documentation could not be loaded',
-          message: 'Please run "npm run build-docs" to generate documentation',
-        });
-      });
-    }
-  } else {
-    console.warn('⚠️  swagger.json not found');
-    console.warn('💡 Run "npm run build-docs" to generate swagger.json');
-
-    // Fallback роут якщо документація відсутня
-    app.get('/api-docs', (req, res) => {
-      res.status(404).json({
-        error: 'Documentation not available',
-        message: 'Please run "npm run build-docs" to generate documentation',
-        commands: ['npm run build-docs', 'npm restart'],
-      });
-    });
+    console.log('✅ Swagger documentation loaded successfully');
+  } catch (error) {
+    console.warn('⚠️ Failed to load Swagger documentation:', error.message);
+    console.warn(
+      '💡 Make sure to run "npm run build-docs" to generate swagger.json',
+    );
   }
 
+  // Основний роут
   app.get('/', (req, res) => {
     res.json({
-      message: 'Welcome to Contact Manager API! 👋',
-      documentation: '/api-docs',
+      message: 'Contact Manager API is running!',
+      documentation: `${req.protocol}://${req.get('host')}/api-docs`,
       endpoints: {
-        contacts: '/contacts',
         auth: '/auth',
+        contacts: '/contacts',
       },
     });
   });
 
+  // API роути
   app.use('/contacts', contactsRouter);
   app.use('/auth', authRouter);
 
+  // Middleware для обробки неіснуючих роутів (має бути перед errorHandler)
   app.use(notFoundHandler);
 
+  // Middleware для обробки помилок (має бути останнім)
   app.use(errorHandler);
 
+  // Запуск сервера
   app.listen(PORT || 3000, () => {
     console.log(`🚀 Server is running on port ${PORT || 3000}`);
     console.log(
-      `📚 API Documentation available at: http://localhost:${
-        PORT || 3000
-      }/api-docs`,
+      `📚 API Documentation: http://localhost:${PORT || 3000}/api-docs`,
     );
-    console.log(
-      `📄 Raw API spec available at: http://localhost:${
-        PORT || 3000
-      }/api-docs.json`,
-    );
+    console.log(`🌐 API Base URL: http://localhost:${PORT || 3000}`);
   });
 };
